@@ -212,6 +212,7 @@ export default function DonationPage() {
           : null,
       })
       .then((response) => {
+        console.log(response);
         if (response.data) {
           if (response.data.gateway == "sbiepay") {
             localStorage.setItem(
