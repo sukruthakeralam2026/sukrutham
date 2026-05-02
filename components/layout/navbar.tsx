@@ -14,9 +14,11 @@ const Navbar = () => {
             height={100}
           />
         </Link>
-        <a
-          href="/"
+      <a
+          href="https://sukruthakeralam.com"
           className="text-sm text-muted-foreground hover:text-foreground"
+          target="_blank"
+          rel="noopener noreferrer"
         >
           Main Site
         </a>

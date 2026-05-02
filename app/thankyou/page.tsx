@@ -11,9 +11,10 @@ import axios from "axios";
 import toast from "react-hot-toast";
 
 type PaymentDetails = {
+  payment_gateway: string;
   payment_status: string;
-  merchant_order_id: string;
-  phonepe_order_id: string;
+  sbiepay_ref_id?: string | null;
+  phonepe_order_id?: string | null;
 };
 
 type Donation = {
@@ -35,11 +36,18 @@ function ThankYouContent() {
   const [isLoading, setIsLoading] = useState(true);
   const [status, setStatus] = useState("pending");
   const [collectedAmount, setCollectedAmount] = useState(0);
-  const [paymentUrl, setPaymentUrl] = useState("");
+  // const [paymentUrl, setPaymentUrl] = useState("");
 
   useEffect(() => {
     const order_id = searchParams.get("order_id");
+    const message = searchParams.get("message");
+
     if (!order_id) {
+      if (message) {
+        toast.error(message);
+      } else {
+        toast.error("Unable to fetch payment status.");
+      }
       router.push(`/`);
       return;
     }
@@ -77,10 +85,13 @@ function ThankYouContent() {
           if (localStorage.getItem("pending_order_id"))
             localStorage.removeItem("pending_order_id");
 
-          setIsLoading(false);
           setDonationStatus(response.data);
+          setIsLoading(false);
           setStatus(response.data?.payment_details.payment_status);
-          if (response.data?.payment_details.payment_status == "completed") {
+          if (
+            response.data?.payment_details.payment_status == "completed" ||
+            response.data?.payment_details.payment_status == "success"
+          ) {
             toast.success("Your payment is successful!");
             const completedOrderIds = localStorage.getItem(
               "completed_order_ids"
@@ -101,14 +112,15 @@ function ThankYouContent() {
               );
             }
           } else if (
-            response.data?.payment_details.payment_status == "failed"
+            response.data?.payment_details.payment_status == "failed" ||
+            response.data?.payment_details.payment_status == "expired"
           ) {
             toast.error("Your payment has failed. Please try again.");
           } else if (
             response.data?.payment_details.payment_status == "pending"
           ) {
-            if (response.data?.payment_details.is_payment_url_expired == false)
-              setPaymentUrl(response.data?.payment_details.payment_url);
+            // if (response.data?.payment_details.is_payment_url_expired == false)
+            //   setPaymentUrl(response.data?.payment_details.payment_url);
             localStorage.setItem("pending_order_id", order_id);
             toast.error(
               "Your payment is still pending. Please complete the payment. If already done, please refresh the page.",
@@ -206,7 +218,7 @@ function ThankYouContent() {
         pdf.save(`Sukrutha_Kerala_Certificate_${orderId}.pdf`);
       } catch (error) {
         console.error("Error generating certificate:", error);
-        alert("Error generating certificate. Please try again.");
+        toast.error("Error generating certificate. Please try again.");
       }
     }
   };
@@ -220,7 +232,7 @@ function ThankYouContent() {
         </div>
       </div>
     </div>
-  ) : status == "completed" ? (
+  ) : status == "completed" || status == "success" ? (
     <div className=" bg-gray-50 ">
       <div className="flex items-center justify-center min-h-[calc(100vh-80px)] p-6 overflow-scroll ">
         {/* certificate section */}
@@ -228,7 +240,7 @@ function ThankYouContent() {
           <div ref={certificateRef} className="p-8">
             <div className="flex justify-center mb-1">
               <Image
-                src="/images/Diversity Team Illustration.avif"
+                src="/images/thankyouimage.avif"
                 alt="Community celebration"
                 width={300}
                 height={200}
@@ -259,7 +271,7 @@ function ThankYouContent() {
               </div>
               <div className="flex justify-between items-center py-2">
                 <span className="text-gray-600 font-medium">
-                  Payment Method:
+                  Payment Amount:
                 </span>
                 <span className="text-gray-900 font-semibold">
                   {donationStatus?.amount}
@@ -374,7 +386,7 @@ function ThankYouContent() {
         >
           Refresh
         </Button>
-        {paymentUrl ? (
+        {/* {paymentUrl ? (
           <div className="flex flex-col items-center gap-4 mt-5">
             <p>
               <a
@@ -385,23 +397,23 @@ function ThankYouContent() {
               </a>
             </p>
           </div>
-        ) : (
-          <div className="flex flex-col items-center gap-4 mt-5">
-            <p>
-              <a
-                href=""
-                onClick={(e) => {
-                  e.preventDefault();
-                  localStorage.removeItem("pending_order_id");
-                  router.push("/");
-                }}
-                className="underline text-blue-400 cursor-pointer"
-              >
-                Go back to home page
-              </a>
-            </p>
-          </div>
-        )}
+        ) : ( */}
+        <div className="flex flex-col items-center gap-4 mt-5">
+          <p>
+            <a
+              href=""
+              onClick={(e) => {
+                e.preventDefault();
+                localStorage.removeItem("pending_order_id");
+                router.push("/");
+              }}
+              className="underline text-blue-400 cursor-pointer"
+            >
+              Go back to home page
+            </a>
+          </p>
+        </div>
+        {/* )} */}
       </div>
     </div>
   );

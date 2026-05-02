@@ -14,6 +14,7 @@ import {
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import axios from "axios";
 import toast from "react-hot-toast";
 
@@ -118,16 +119,21 @@ export default function DonationPage() {
 
     // Required fields validation
     if (!fullName.trim()) newErrors.fullName = "Full name is required";
+    else if (!/^[A-Za-z][A-Za-z .'-]*[A-Za-z]$/.test(fullName))
+      newErrors.fullName =
+        "Please enter a valid full name. It should start and end with a letter and can contain spaces, periods, apostrophes, or hyphens.";
     // if (!email.trim()) newErrors.email = "Email is required";
-    else if (email && !/\S+@\S+\.\S+/.test(email))
+    if (email && !/\S+@\S+\.\S+/.test(email))
       newErrors.email = "Please enter a valid email";
     if (!contact.trim()) newErrors.contact = "Contact number is required";
     else {
       // Remove spaces and hyphens for validation
       const cleanContact = contact.replace(/[\s\-]/g, "");
       // Basic validation - should be digits and reasonable length
-      if (!/^\d{7,15}$/.test(cleanContact)) {
+      if (!/^\+?[0-9]{1,4}[0-9]{5,14}$/.test(cleanContact)) {
         newErrors.contact = "Please enter a valid contact number (7-15 digits)";
+      } else {
+        setContact(cleanContact); // Update contact to cleaned version
       }
     }
     if (!amount || parseFloat(amount) <= 0)
@@ -139,15 +145,27 @@ export default function DonationPage() {
     if (wantsCertificate) {
       if (!pan.trim())
         newErrors.pan = "PAN number is required for 80G certificate";
-      // else if (!/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(pan.toUpperCase()))
-      //   newErrors.pan = "Please enter a valid PAN number";
+      else if (!/^[A-Za-z0-9]+$/.test(pan.toUpperCase()))
+        newErrors.pan = "Please enter a valid PAN number";
       if (!address.trim())
         newErrors.address = "Full address is required for 80G certificate";
+      else if (!/^[a-zA-Z0-9\s.,'#/-]+$/.test(address))
+        newErrors.address =
+          "Please enter a valid address. The address should only contain letters, numbers, spaces, and common punctuation like commas, periods, and hyphens";
       if (!city.trim()) newErrors.city = "City is required for 80G certificate";
+      else if (!/^[A-Za-z\s-]+$/.test(city))
+        newErrors.city =
+          "Please enter a valid city name. It should only contain letters, spaces, and hyphens.";
       if (!state.trim())
         newErrors.state = "State is required for 80G certificate";
+      else if (!/^[A-Za-z\s-]+$/.test(state))
+        newErrors.state =
+          "Please enter a valid state name. It should only contain letters, spaces, and hyphens.";
       if (!country.trim())
         newErrors.country = "Country is required for 80G certificate";
+      else if (!/^[A-Za-z\s-]+$/.test(country))
+        newErrors.country =
+          "Please enter a valid country name. It should only contain letters, spaces, and hyphens.";
       if (!pinCode.trim())
         newErrors.pinCode = "PIN code is required for 80G certificate";
       else if (!/^\d{6}$/.test(pinCode))
@@ -194,13 +212,40 @@ export default function DonationPage() {
           : null,
       })
       .then((response) => {
-        if (response.data && response.data.payment_url) {
-          localStorage.setItem(
-            "pending_order_id",
-            response.data.merchant_order_id
-          );
-          const redirect_url = response.data.payment_url;
-          window.location.href = redirect_url;
+        console.log(response);
+        if (response.data) {
+          if (response.data.gateway == "sbiepay") {
+            localStorage.setItem(
+              "pending_order_id",
+              response.data.merchant_order_id
+            );
+
+            const form = document.createElement("form");
+            form.method = "post";
+            form.action = response.data.gateway_url;
+
+            const hiddenField = document.createElement("input");
+            hiddenField.type = "hidden";
+            hiddenField.name = "EncryptTrans";
+            hiddenField.value = response.data.payment_form_data.EncryptTrans;
+            form.appendChild(hiddenField);
+            const hiddenField2 = document.createElement("input");
+            hiddenField2.type = "hidden";
+            hiddenField2.name = "merchIdVal";
+            hiddenField2.value = response.data.payment_form_data.merchIdVal;
+            form.appendChild(hiddenField2);
+
+            // Append the form to the body and submit it
+            document.body.appendChild(form);
+            form.submit();
+          } else if (response.data.gateway == "phonepe") {
+            localStorage.setItem(
+              "pending_order_id",
+              response.data.merchant_order_id
+            );
+            const redirect_url = response.data.payment_url;
+            window.location.href = redirect_url;
+          }
         } else {
           setIsLoading(false);
           toast.error(
@@ -484,6 +529,8 @@ export default function DonationPage() {
                   className="bg-gray-50"
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
+                  minLength={2}
+                  maxLength={100}
                 />
                 {showErrors && errors.fullName && (
                   <p className="text-red-500 text-sm mt-1">{errors.fullName}</p>
@@ -535,6 +582,8 @@ export default function DonationPage() {
                     className="bg-gray-50 flex-1"
                     value={contact}
                     onChange={(e) => setContact(e.target.value)}
+                    minLength={5}
+                    maxLength={25}
                   />
                 </div>
                 {showErrors && errors.contact && (
@@ -660,6 +709,8 @@ export default function DonationPage() {
                       className="bg-gray-50"
                       value={pan}
                       onChange={(e) => setPan(e.target.value)}
+                      minLength={10}
+                      maxLength={10}
                     />
                     {showErrors && errors.pan && (
                       <p className="text-red-500 text-sm mt-1">{errors.pan}</p>
@@ -676,6 +727,8 @@ export default function DonationPage() {
                       className="bg-gray-50 min-h-[80px]"
                       value={address}
                       onChange={(e) => setAddress(e.target.value)}
+                      minLength={5}
+                      maxLength={500}
                     />
                     {showErrors && errors.address && (
                       <p className="text-red-500 text-sm mt-1">
@@ -694,6 +747,8 @@ export default function DonationPage() {
                       className="bg-gray-50"
                       value={city}
                       onChange={(e) => setCity(e.target.value)}
+                      minLength={2}
+                      maxLength={100}
                     />
                     {showErrors && errors.city && (
                       <p className="text-red-500 text-sm mt-1">{errors.city}</p>
@@ -710,6 +765,8 @@ export default function DonationPage() {
                       className="bg-gray-50"
                       value={state}
                       onChange={(e) => setState(e.target.value)}
+                      minLength={2}
+                      maxLength={100}
                     />
                     {showErrors && errors.state && (
                       <p className="text-red-500 text-sm mt-1">
@@ -728,6 +785,8 @@ export default function DonationPage() {
                       className="bg-gray-50"
                       value={country}
                       onChange={(e) => setCountry(e.target.value)}
+                      minLength={2}
+                      maxLength={100}
                     />
                     {showErrors && errors.country && (
                       <p className="text-red-500 text-sm mt-1">
@@ -746,6 +805,8 @@ export default function DonationPage() {
                       className="bg-gray-50"
                       value={pinCode}
                       onChange={(e) => setPinCode(e.target.value)}
+                      minLength={6}
+                      maxLength={6}
                     />
                     {showErrors && errors.pinCode && (
                       <p className="text-red-500 text-sm mt-1">
@@ -757,7 +818,7 @@ export default function DonationPage() {
               </div> */}
 
               {/* Terms & Conditions Checkbox */}
-              <div className="space-y-2">
+ <div className="space-y-2">
                 <div className="flex items-center space-x-2">
                   <Checkbox
                     id="terms"
@@ -769,14 +830,21 @@ export default function DonationPage() {
                     className="data-[state=checked]:bg-primary data-[state=checked]:border-teal-600"
                   />
                   <label htmlFor="terms" className="text-sm">
-                    Confirming Terms & Conditions{" "}
+                    I hereby accepting{" "}
+                    <Link 
+                      href="/terms-and-conditions" 
+                      className="text-primary underline hover:text-teal-700"
+                      target="_blank"
+                    >
+                      Terms & Conditions
+                    </Link>{" "}
                     <span className="text-red-500">*</span>
                   </label>
                 </div>
                 {(showTermsError || (showErrors && errors.terms)) && (
                   <p className="text-red-500 text-sm">
                     {errors.terms ||
-                      "Please accept the Terms & Conditions to proceed."}
+                      "I hereby accepting the terms and conditions"}
                   </p>
                 )}
               </div>
