@@ -41,6 +41,10 @@ export default function DonationPage() {
   const [pinCode, setPinCode] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
+  // "What inspired you" states
+  const [inspiredBy, setInspiredBy] = useState("");
+  const [inspiredByFriendName, setInspiredByFriendName] = useState("");
+
   // Form validation states
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [showErrors, setShowErrors] = useState(false);
@@ -172,6 +176,11 @@ export default function DonationPage() {
         newErrors.pinCode = "Please enter a valid 6-digit PIN code";
     }
 
+    // Inspired by validation
+    if (inspiredBy === "friend" && !inspiredByFriendName.trim())
+      newErrors.inspiredByFriendName =
+        "Please enter the name of the friend who inspired you";
+
     // Terms validation
     if (!termsAccepted)
       newErrors.terms = "Please accept the Terms & Conditions to proceed";
@@ -200,6 +209,9 @@ export default function DonationPage() {
         amount: amount,
         need_g80_certificate: wantsCertificate,
         confirmed_terms: termsAccepted,
+        inspired_by: inspiredBy || null,
+        inspired_by_friend_name:
+          inspiredBy === "friend" ? inspiredByFriendName : null,
         form_g80: wantsCertificate
           ? {
               pan_number: pan,
@@ -816,6 +828,61 @@ export default function DonationPage() {
                   </div>
                 </div>
               </div> */}
+
+              {/* What inspired you to support this initiative? */}
+              <div>
+                <label className="text-sm font-medium mb-1 block">
+                  What inspired you to support this initiative?
+                </label>
+                <Select
+                  value={inspiredBy}
+                  onValueChange={(val) => {
+                    setInspiredBy(val);
+                    if (val !== "friend") setInspiredByFriendName("");
+                  }}
+                >
+                  <SelectTrigger className="bg-gray-50 w-full">
+                    <SelectValue placeholder="Select an option" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="facebook">Facebook</SelectItem>
+                    <SelectItem value="instagram">Instagram</SelectItem>
+                    <SelectItem value="news">News</SelectItem>
+                    <SelectItem value="community">Community</SelectItem>
+                    <SelectItem value="groups">Groups</SelectItem>
+                    <SelectItem value="friend">Friend</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                {/* Conditional friend name text box */}
+                <div
+                  className={`overflow-hidden transition-all duration-500 ease-in-out ${
+                    inspiredBy === "friend"
+                      ? "max-h-24 opacity-100 mt-3"
+                      : "max-h-0 opacity-0 mt-0"
+                  }`}
+                >
+                  <div
+                    className={`transition-transform duration-500 ease-in-out ${
+                      inspiredBy === "friend" ? "translate-y-0" : "-translate-y-4"
+                    }`}
+                  >
+                    <Input
+                      placeholder="Enter your friend's name"
+                      className="bg-gray-50"
+                      value={inspiredByFriendName}
+                      onChange={(e) => setInspiredByFriendName(e.target.value)}
+                      minLength={2}
+                      maxLength={100}
+                    />
+                    {showErrors && errors.inspiredByFriendName && (
+                      <p className="text-red-500 text-sm mt-1">
+                        {errors.inspiredByFriendName}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
 
               {/* Terms & Conditions Checkbox */}
  <div className="space-y-2">
